@@ -1,0 +1,52 @@
+#!/usr/bin/php
+<?php
+// https://packagist.org/packages/orhanerday/open-ai
+require __DIR__ . '/vendor/autoload.php';
+
+use Orhanerday\OpenAi\OpenAi;
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+$open_ai_key = $_ENV['OPENAI_KEY'];
+$open_ai = new OpenAi($open_ai_key);
+
+
+
+$transactionLog = [];
+$summary = "";
+$bias = [
+   'role' => 'system',
+   'content' => ''
+];
+array_push($transactionLog, $bias);
+
+$fp = fopen('logfile', 'a');
+fwrite($fp, "\nNEW SESSION STARTED\n");
+fwrite($fp, "SYSTEM: " . $bias['content'] . PHP_EOL);
+
+print("Valid commands are #endsession and #note (text)\n");
+while (($prompt = readline("Prompt: ")) != '#endsession') {
+   if (str_contains($prompt, "#note")) {
+      $note = substr($prompt, 6);
+      fwrite($fp, "NOTE: " . $note . PHP_EOL);
+   } else {
+      array_push($transactionLog, ['role' => 'user', 'content' => $prompt]);
+      fwrite($fp, "USER: " . $prompt . PHP_EOL);
+      $complete = $open_ai->chat([
+         'model' => 'gpt-3.5-turbo',
+         'messages' => $transactionLog,
+         'temperature' => 1.0,
+         'max_tokens' => 1000,
+         'frequency_penalty' => 0,
+         'presence_penalty' => 0,
+      ]);
+      $complete = json_decode($complete);
+      $output = $complete->choices[0]->message->content;
+      array_push($transactionLog, ['role' => 'assistant', 'content' => $output]);
+      fwrite($fp, "ASSISTANT: " . $output . PHP_EOL);
+      print($output . PHP_EOL);
+   }
+}
+
+// print(json_encode($transactionLog));
