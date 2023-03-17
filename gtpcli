@@ -17,7 +17,7 @@ $transactionLog = [];
 $summary = "";
 $bias = [
    'role' => 'system',
-   'content' => ''
+   'content' => $_ENV['BIAS']
 ];
 array_push($transactionLog, $bias);
 
